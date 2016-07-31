@@ -1,0 +1,273 @@
+var http = require('http');
+
+/**
+ * This sample demonstrates a simple skill built with the Amazon Alexa Skills Kit.
+ * The Intent Schema, Custom Slots, and Sample Utterances for this skill, as well as
+ * testing instructions are located at http://amzn.to/1LzFrj6
+ *
+ * For additional samples, visit the Alexa Skills Kit Getting Started guide at
+ * http://amzn.to/1LGWsLG
+ */
+
+// Route the incoming request based on type (LaunchRequest, IntentRequest,
+// etc.) The JSON body of the request is provided in the event parameter.
+exports.handler = function (event, context) {
+    try {
+        console.log("event.session.application.applicationId=" + event.session.application.applicationId);
+
+        /**
+         * Uncomment this if statement and populate with your skill's application ID to
+         * prevent someone else from configuring a skill that sends requests to this function.
+         */
+        /*
+        if (event.session.application.applicationId !== "amzn1.echo-sdk-ams.app.[unique-value-here]") {
+             context.fail("Invalid Application ID");
+        }
+        */
+
+        if (event.session.new) {
+            onSessionStarted({requestId: event.request.requestId}, event.session);
+        }
+
+        if (event.request.type === "LaunchRequest") {
+            onLaunch(event.request,
+                event.session,
+                function callback(sessionAttributes, speechletResponse) {
+                    context.succeed(buildResponse(sessionAttributes, speechletResponse));
+                });
+        } else if (event.request.type === "IntentRequest") {
+            onIntent(event.request,
+                event.session,
+                function callback(sessionAttributes, speechletResponse) {
+                    context.succeed(buildResponse(sessionAttributes, speechletResponse));
+                });
+        } else if (event.request.type === "SessionEndedRequest") {
+            onSessionEnded(event.request, event.session);
+            context.succeed();
+        }
+    } catch (e) {
+        context.fail("Exception: " + e);
+    }
+};
+
+function api(endpoint, cb) {
+
+    return http.get({
+        host: 'ergast.com',
+        path: '/api/f1/' + endpoint + '.json'
+    }, function(res) {
+        res.setEncoding('utf8');
+        // Continuously update stream with data
+        var body = '';
+        res.on('data', function(d) {
+            body += d;
+        });
+        res.on('end', function() {
+
+            try {
+                console.log(body);
+                var parsed = JSON.parse(body);
+            } catch (err) {
+                console.error('Unable to parse response as JSON', err);
+                return cb(err);
+            }
+            
+            cb(parsed.MRData);
+            
+        });
+    }).on('error', function(err) {
+        // handle errors with the request itself
+        console.error('Error with the request:', err.message);
+        cb(err);
+    });
+
+}
+
+/**
+ * Called when the session starts.
+ */
+function onSessionStarted(sessionStartedRequest, session) {
+    console.log("onSessionStarted requestId=" + sessionStartedRequest.requestId +
+        ", sessionId=" + session.sessionId);
+}
+
+/**
+ * Called when the user launches the skill without specifying what they want.
+ */
+function onLaunch(launchRequest, session, callback) {
+    console.log("onLaunch requestId=" + launchRequest.requestId +
+        ", sessionId=" + session.sessionId);
+
+    // Dispatch to your skill's launch.
+    getWelcomeResponse(callback);
+}
+
+/**
+ * Called when the user specifies an intent for this skill.
+ */
+function onIntent(intentRequest, session, callback) {
+    console.log("onIntent requestId=" + intentRequest.requestId +
+        ", sessionId=" + session.sessionId);
+
+    var intent = intentRequest.intent,
+        intentName = intentRequest.intent.name;
+    
+    this.cb = callback;
+
+    switch(intentName) {
+        case "GetNextRace":
+            api('current/next', function(race) {
+                
+                var cardTitle = 'Next Race';
+                var shouldEndSession = true;
+                var speechOutput = "The next race is the " +
+                    race.RaceTable.Races[0].raceName + " on " +
+                    '<say-as interpret-as="date">????' + 
+                        race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
+                    '</say-as>';
+            
+                this.cb({}, buildSpeechletResponse(cardTitle, speechOutput, speechOutput, shouldEndSession));
+                
+            }.bind(this));
+            break;
+            
+        case "GetLastRace":
+            api('current/last', function(race) {
+                                
+                var cardTitle = 'Last Race';
+                var shouldEndSession = true;
+                var speechOutput = "The last race was the " +
+                    race.RaceTable.Races[0].raceName + " on " +
+                    '<say-as interpret-as="date">????' + 
+                        race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
+                    '</say-as>';
+                
+                this.cb({}, buildSpeechletResponse(cardTitle, speechOutput, speechOutput, shouldEndSession));
+                
+            }.bind(this));
+            break;
+            
+        case "GetLastRaceResults":
+            api('current/last/results', function(race) {
+                var cardTitle = 'Last Race Results';
+                var shouldEndSession = true;
+                var speechOutput = "The top three finishers for the " +
+                    race.RaceTable.Races[0].raceName + " on " +
+                    '<say-as interpret-as="date">????' + 
+                        race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
+                    '</say-as>. ' +
+                    "First Place " +
+                        race.RaceTable.Races[0].Results[0].Driver.givenName + " " +
+                        race.RaceTable.Races[0].Results[0].Driver.familyName +
+                    ". Second Place " +
+                        race.RaceTable.Races[0].Results[1].Driver.givenName + " " + 
+                        race.RaceTable.Races[0].Results[1].Driver.familyName +
+                    ". Third Place " +
+                        race.RaceTable.Races[0].Results[2].Driver.givenName + " " +
+                        race.RaceTable.Races[0].Results[2].Driver.familyName +
+                    ".";
+                        
+                this.cb({}, buildSpeechletResponse(cardTitle, speechOutput, speechOutput, shouldEndSession));
+                
+            }.bind(this));
+            break;
+            
+        case "GetDriverStandings":
+            api('current/driverStandings', function(race) {
+                var cardTitle = 'Drivers Championship';
+                var shouldEndSession = true;
+                var speechOutput = "The drivers championship currently stands at " +
+                    "First Place, " +
+                        race.StandingsTable.StandingsLists[0].DriverStandings[0].Driver.givenName + " " +
+                        race.StandingsTable.StandingsLists[0].DriverStandings[0].Driver.familyName +
+                        " with " + race.StandingsTable.StandingsLists[0].DriverStandings[0].points + " points. " +
+                    "Second Place, " +
+                        race.StandingsTable.StandingsLists[0].DriverStandings[1].Driver.givenName + " " +
+                        race.StandingsTable.StandingsLists[0].DriverStandings[1].Driver.familyName +
+                        " with " + race.StandingsTable.StandingsLists[0].DriverStandings[1].points + " points. " +
+                    "Third Place, " +
+                        race.StandingsTable.StandingsLists[0].DriverStandings[2].Driver.givenName + " " +
+                        race.StandingsTable.StandingsLists[0].DriverStandings[2].Driver.familyName +
+                        " with " + race.StandingsTable.StandingsLists[0].DriverStandings[2].points + " points. ";
+                    
+                this.cb({}, buildSpeechletResponse(cardTitle, speechOutput, speechOutput, shouldEndSession));
+                
+            }.bind(this));
+            break;
+        
+        case "AMAZON.HelpIntent":
+                getWelcomeResponse(callback);
+            break;
+            
+        case "Amazon.StopIntent":
+        case "AMAZON.CancelIntent":
+        default:
+            handleSessionEndRequest(callback);
+            break;
+    }
+    
+}
+
+/**
+ * Called when the user ends the session.
+ * Is not called when the skill returns shouldEndSession=true.
+ */
+function onSessionEnded(sessionEndedRequest, session) {
+    console.log("onSessionEnded requestId=" + sessionEndedRequest.requestId + ", sessionId=" + session.sessionId);
+    // Add cleanup logic here
+}
+
+// --------------- Functions that control the skill's behavior -----------------------
+
+function getWelcomeResponse(callback) {
+    // If we wanted to initialize the session to have some attributes we could add those here.
+    var sessionAttributes = {};
+    var cardTitle = "Welcome";
+    var speechOutput = "You can ask me about the next or last race, last race results, or drivers championship.";
+    // If the user either does not reply to the welcome message or says something that is not
+    // understood, they will be prompted again with this text.
+    var repromptText = "Please ask me about the next or last race, last race results, or the drivers championship.";
+    var shouldEndSession = false;
+
+    callback(sessionAttributes, buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+}
+
+function handleSessionEndRequest(callback) {
+    var cardTitle = ""; //"Session Ended";
+    var speechOutput = ""; //"Thank you for trying the Alexa Skills Kit sample. Have a nice day!";
+    // Setting this to true ends the session and exits the skill.
+    var shouldEndSession = true;
+
+    callback({}, buildSpeechletResponse(cardTitle, speechOutput, null, shouldEndSession));
+}
+
+// --------------- Helpers that build all of the responses -----------------------
+
+function buildSpeechletResponse(title, output, repromptText, shouldEndSession) {
+    return {
+        outputSpeech: {
+            type: "SSML",
+            text: "<speak>" + output + "</speak>"
+        },
+        card: {
+            type: "Simple",
+            title: "Formula 1 Info - " + title,
+            content: output
+        },
+        reprompt: {
+            outputSpeech: {
+                type: "SSML",
+                text: repromptText
+            }
+        },
+        shouldEndSession: shouldEndSession
+    };
+}
+
+function buildResponse(sessionAttributes, speechletResponse) {
+    return {
+        version: "1.0",
+        sessionAttributes: sessionAttributes,
+        response: speechletResponse
+    };
+}
