@@ -122,9 +122,10 @@ function onIntent(intentRequest, session, callback) {
                 var shouldEndSession = true;
                 var speechOutput = "The next race is the " +
                     race.RaceTable.Races[0].raceName + " on " +
-                    '<say-as interpret-as="date">????' + 
-                        race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
-                    '</say-as>';
+                    race.RaceTable.Races[0].date;
+                    //'<say-as interpret-as="date">????' + 
+                    //    race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
+                    //'</say-as>. ' +;
             
                 this.cb({}, buildSpeechletResponse(cardTitle, speechOutput, speechOutput, shouldEndSession));
                 
@@ -138,9 +139,10 @@ function onIntent(intentRequest, session, callback) {
                 var shouldEndSession = true;
                 var speechOutput = "The last race was the " +
                     race.RaceTable.Races[0].raceName + " on " +
-                    '<say-as interpret-as="date">????' + 
-                        race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
-                    '</say-as>';
+                    race.RaceTable.Races[0].date;
+                    //'<say-as interpret-as="date">????' + 
+                    //    race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
+                    //'</say-as>. ' +;
                 
                 this.cb({}, buildSpeechletResponse(cardTitle, speechOutput, speechOutput, shouldEndSession));
                 
@@ -153,10 +155,11 @@ function onIntent(intentRequest, session, callback) {
                 var shouldEndSession = true;
                 var speechOutput = "The top three finishers for the " +
                     race.RaceTable.Races[0].raceName + " on " +
-                    '<say-as interpret-as="date">????' + 
-                        race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
-                    '</say-as>. ' +
-                    "First Place " +
+                    race.RaceTable.Races[0].date +
+                    //'<say-as interpret-as="date">????' + 
+                    //    race.RaceTable.Races[0].date.replace(/-/g,'').substring(4) +
+                    //'</say-as>. ' +
+                    ". First Place " +
                         race.RaceTable.Races[0].Results[0].Driver.givenName + " " +
                         race.RaceTable.Races[0].Results[0].Driver.familyName +
                     ". Second Place " +
@@ -246,18 +249,20 @@ function handleSessionEndRequest(callback) {
 function buildSpeechletResponse(title, output, repromptText, shouldEndSession) {
     return {
         outputSpeech: {
-            type: "SSML",
-            text: "<speak>" + output + "</speak>"
+            type: "PlainText",
+            text: output
+            //type: "SSML",
+            //text: "<speak>" + output + "</speak>"
         },
         card: {
             type: "Simple",
-            title: "Formula 1 Info - " + title,
+            title: "Race Info for Formula 1 -" + title,
             content: output
         },
         reprompt: {
             outputSpeech: {
-                type: "SSML",
-                text: repromptText
+                type: "PlainText",
+                text: output
             }
         },
         shouldEndSession: shouldEndSession
