@@ -179,7 +179,7 @@ function onIntent(intentRequest, session, callback) {
             api('current/driverStandings', function(race) {
                 var cardTitle = 'Drivers Championship';
                 var shouldEndSession = true;
-                var speechOutput = "The drivers championship currently stands at " +
+                var speechOutput = "The Drivers Championship currently stands at " +
                     "First Place, " +
                         race.StandingsTable.StandingsLists[0].DriverStandings[0].Driver.givenName + " " +
                         race.StandingsTable.StandingsLists[0].DriverStandings[0].Driver.familyName +
@@ -198,11 +198,31 @@ function onIntent(intentRequest, session, callback) {
             }.bind(this));
             break;
         
+        case "GetConstructorStandings":
+            api('current/constructorStandings', function(race) {
+                var cardTitle = 'Constructors Championship';
+                var shouldEndSession = true;
+                var speechOutput = "The Constructors Championship currently stands at " +
+                    "First Place, " +
+                        race.StandingsTable.StandingsLists[0].ConstructorStandings[0].Constructor.name + " " +
+                        " with " + race.StandingsTable.StandingsLists[0].ConstructorStandings[0].points + " points. " +
+                    "Second Place, " +
+                        race.StandingsTable.StandingsLists[0].ConstructorStandings[1].Constructor.name + " " +
+                        " with " + race.StandingsTable.StandingsLists[0].ConstructorStandings[1].points + " points. " +
+                    "Third Place, " +
+                        race.StandingsTable.StandingsLists[0].ConstructorStandings[2].Constructor.name + " " +
+                        " with " + race.StandingsTable.StandingsLists[0].ConstructorStandings[2].points + " points. ";
+                    
+                this.cb({}, buildSpeechletResponse(cardTitle, speechOutput, speechOutput, shouldEndSession));
+                
+            }.bind(this));
+            break;
+        
         case "AMAZON.HelpIntent":
                 getWelcomeResponse(callback);
             break;
-            
-        case "Amazon.StopIntent":
+        
+        case "AMAZON.StopIntent":
         case "AMAZON.CancelIntent":
         default:
             handleSessionEndRequest(callback);
@@ -229,7 +249,13 @@ function getWelcomeResponse(callback) {
     var speechOutput = "You can ask me about the next or last race, last race results, or drivers championship.";
     // If the user either does not reply to the welcome message or says something that is not
     // understood, they will be prompted again with this text.
-    var repromptText = "Please ask me about the next or last race, last race results, or the drivers championship.";
+    var repromptText = "Here are some things you can say: " +
+        "When is the next race, " +
+        "When was the last race, " +
+        "Who won the last race, " +
+        "or Who is winning. " +
+        "You can also say, stop, if you're done. " +
+        "So, how can I help?";
     var shouldEndSession = false;
 
     callback(sessionAttributes, buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
@@ -256,13 +282,13 @@ function buildSpeechletResponse(title, output, repromptText, shouldEndSession) {
         },
         card: {
             type: "Simple",
-            title: "Race Info for Formula 1 -" + title,
+            title: "Race Info for Formula 1 - " + title,
             content: output
         },
         reprompt: {
             outputSpeech: {
                 type: "PlainText",
-                text: output
+                text: repromptText
             }
         },
         shouldEndSession: shouldEndSession
