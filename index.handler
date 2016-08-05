@@ -19,11 +19,11 @@ exports.handler = function (event, context) {
          * Uncomment this if statement and populate with your skill's application ID to
          * prevent someone else from configuring a skill that sends requests to this function.
          */
-        /*
-        if (event.session.application.applicationId !== "amzn1.echo-sdk-ams.app.[unique-value-here]") {
+        
+        if (event.session.application.applicationId !== "amzn1.ask.skill.7b017552-4f25-4583-a488-04141245b52b") {
              context.fail("Invalid Application ID");
         }
-        */
+        
 
         if (event.session.new) {
             onSessionStarted({requestId: event.request.requestId}, event.session);
@@ -67,18 +67,17 @@ function api(endpoint, cb) {
             try {
                 console.log(body);
                 var parsed = JSON.parse(body);
+                cb(parsed.MRData);
+                //return parsed.MRData;
             } catch (err) {
                 console.error('Unable to parse response as JSON', err);
-                return cb(err);
+                throw(err);
             }
-            
-            cb(parsed.MRData);
-            
         });
     }).on('error', function(err) {
         // handle errors with the request itself
         console.error('Error with the request:', err.message);
-        cb(err);
+        throw(err);
     });
 
 }
@@ -177,7 +176,7 @@ function onIntent(intentRequest, session, callback) {
             
         case "GetDriverStandings":
             api('current/driverStandings', function(race) {
-                var cardTitle = 'Drivers Championship';
+                var cardTitle = 'World Drivers Championship';
                 var shouldEndSession = true;
                 var speechOutput = "The Drivers Championship currently stands at " +
                     "First Place, " +
@@ -282,7 +281,7 @@ function buildSpeechletResponse(title, output, repromptText, shouldEndSession) {
         },
         card: {
             type: "Simple",
-            title: "Race Info for Formula 1 - " + title,
+            title: title,
             content: output
         },
         reprompt: {
